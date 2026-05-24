@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8型人格测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 页面切换动画 */
+        .page {
+            display: none;
+            animation: fadeIn 0.4s ease-in-out;
+        }
+        .page.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* 选项悬浮动效 */
+        .option-card {
+            transition: all 0.25s ease;
+        }
+        .option-card:hover {
+            transform: translateX(6px);
+            border-color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-10 max-w-2xl">
+        <!-- 首页 -->
+        <div id="startPage" class="page active">
+            <div class="bg-white rounded-2xl shadow-md p-8 text-center">
+                <h1 class="text-3xl font-bold text-gray-800 mb-3">scuti人格测试</h1>
+                <p class="text-gray-500 mb-8">测出你的专属scu人格类型</p>
+                <button id="startBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-10 rounded-full transition-all">
+                    开始测试
+                </button>
+            </div>
+        </div>
+
+        <!-- 答题页 -->
+        <div id="questionPage" class="page">
+            <div class="bg-white rounded-2xl shadow-md p-6 md:p-8">
+                <!-- 进度条 -->
+                <div class="mb-6">
+                    <div class="flex justify-between text-sm text-gray-500 mb-2">
+                        <span>题目 <span id="currentNum">1</span>/16</span>
+                        <span id="progressPercent">6%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div id="progressBar" class="bg-blue-500 h-2 rounded-full transition-all duration-300" style="width: 6%"></div>
+                    </div>
+                </div>
+
+                <h2 id="questionText" class="text-xl font-semibold text-gray-800 mb-7"></h2>
+                <div id="optionsContainer" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- 结果页 -->
+        <div id="resultPage" class="page">
+            <div class="bg-white rounded-2xl shadow-md p-8 text-center">
+                <h2 class="text-xl text-gray-500 mb-3">你的专属人格是</h2>
+                <div id="resultTag" class="inline-block bg-blue-100 text-blue-700 px-4 py-2 rounded-full font-medium mb-4"></div>
+                <h3 id="resultName" class="text-3xl font-bold text-gray-900 mb-5"></h3>
+                <p id="resultDesc" class="text-gray-600 mb-8 leading-relaxed text-left"></p>
+                <button id="restartBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-10 rounded-full transition-all">
+                    重新测试
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ====================== 【配置区：可自由修改】 ======================
+        // 8种人格完整配置（已按你提供的内容录入，后续可直接修改）
+        const PERSONALITIES = [
+            {
+                id: 0,
+                name: "上班鸭",
+                tag: "稳定靠谱·治愈顶流",
+                desc: "明远湖常驻“顶流明星”，朝暮有序，来去准时。清理水华，憨态可掬，不内卷，不敷衍，在安稳里把生活过成光，自带被世界偏爱的从容。"
+            },
+            {
+                id: 1,
+                name: "校园猫咪",
+                tag: "慵懒佛系·外柔内刚",
+                desc: "在太阳下打一整天盹，只是呼吸，就把爱猫人士的罐罐吸进嘴里。看似柔软，却不怕风雨打击，对世俗规则不迎不拒，自立自强，随遇而安，是喵星人特有的生存智慧。"
+            },
+            {
+                id: 2,
+                name: "蓝花楹",
+                tag: "极致浪漫·悄悄蓄力",
+                desc: "一年的沉默扎根，换一个蓝紫色的梦幻“雨季”。无人注目处默默生长，等清风散漫幽香，你以温柔蓄力，以浪漫绽放。"
+            },
+            {
+                id: 3,
+                name: "白石桥",
+                tag: "理想主义·奔赴热爱",
+                desc: "桥上荡漾着青春的声浪，洞里涂鸦着彩色的时光。用坚硬承载温柔，用沉默守护热烈，世界喧嚣扰攘，你的理想始终滚烫。"
+            },
+            {
+                id: 4,
+                name: "小白龙",
+                tag: "精力满满·实干担当",
+                desc: "靠谱的“校园穿梭机”，满课人的救命神器。风风火火是外表，稳妥可靠是内核，你永远充满元气与行动力，是让身边人安心的存在。"
+            },
+            {
+                id: 5,
+                name: "自动贩卖机",
+                tag: "高冷独立·贴心补给",
+                desc: "安静地立于角落，从不在花花绿绿的食堂前刷存在感，却在上课的同学需要时，救星般地出现。你把温柔藏在冷静克制的外表下，不声张，却足够治愈。"
+            },
+            {
+                id: 6,
+                name: "早八人",
+                tag: "热血冲劲·乐观嘴硬",
+                desc: "踩着时间奔赴课堂，带着抱怨，却从不懈怠。在兵荒马乱的日常里自我调整，在普通生活里保持热烈，你鲜活、真实、倔强，永远积极向上。"
+            },
+            {
+                id: 7,
+                name: "不高山",
+                tag: "大智若愚·松弛通透",
+                desc: "名为“不高”，却装得下每个人的舒展和眺望。平缓的地上铺开大片绿荫，默默接纳所有疲惫与欢喜，看似淡然，内心自有山海，你低调藏拙，温和有力，于平凡中见不凡。"
+            }
+        ];
+
+        // 16道生活化测试题目 + 每题4个选项 + 对应人格计分（已匹配8种人格特质，保证结果区分度）
+        const QUESTIONS = [
+            {
+                text: "周末没课，你更愿意怎么安排？",
+                options: [
+                    { text: "规律作息，完成计划后出门散步", score: 0 },
+                    { text: "找个舒服的地方躺平，发呆放松", score: 1 },
+                    { text: "出门探索校园角落，感受风景氛围", score: 2 },
+                    { text: "泡图书馆，为目标默默努力", score: 3 }
+                ]
+            },
+            {
+                text: "小组作业需要你牵头，你会？",
+                options: [
+                    { text: "制定清晰时间表，督促大家准时完成", score: 0 },
+                    { text: "随缘配合，不想承担太多压力", score: 1 },
+                    { text: "负责创意部分，让方案更有氛围感", score: 2 },
+                    { text: "坚持自己想法，把项目做到满意", score: 3 }
+                ]
+            },
+            {
+                text: "赶早八快要迟到，你的状态是？",
+                options: [
+                    { text: "提前出门，预留充足时间避免慌乱", score: 0 },
+                    { text: "佛系赶路，迟到也不会过度焦虑", score: 1 },
+                    { text: "边赶路边吐槽，却依旧全力奔赴课堂", score: 6 },
+                    { text: "抄近路冲刺，优先保证不迟到", score: 4 }
+                ]
+            },
+            {
+                text: "看到朋友陷入情绪内耗，你会？",
+                options: [
+                    { text: "理性分析问题，给出稳定解决方案", score: 0 },
+                    { text: "安静陪伴，默默倾听不打扰对方", score: 7 },
+                    { text: "用温柔的方式开导，制造浪漫氛围", score: 2 },
+                    { text: "点醒对方，鼓励其坚持自我热爱", score: 3 }
+                ]
+            },
+            {
+                text: "挑选课余物品，你更看重？",
+                options: [
+                    { text: "实用耐用，性价比高不出错", score: 0 },
+                    { text: "舒服随性，怎么自在怎么来", score: 1 },
+                    { text: "颜值氛围感，外观好看最重要", score: 2 },
+                    { text: "独特小众，不喜欢随大流", score: 5 }
+                ]
+            },
+            {
+                text: "计划被突发状况打乱，你会？",
+                options: [
+                    { text: "快速调整计划，保证事情有序推进", score: 0 },
+                    { text: "顺其自然，接受变化享受当下", score: 1 },
+                    { text: "重新规划，依旧保持自己的节奏", score: 7 },
+                    { text: "立刻行动，高效处理突发问题", score: 4 }
+                ]
+            },
+            {
+                text: "空闲时，你更常做的事是？",
+                options: [
+                    { text: "整理学习资料，规划后续安排", score: 0 },
+                    { text: "晒太阳、撸猫，享受慵懒时光", score: 1 },
+                    { text: "拍照记录校园，感受生活美好", score: 2 },
+                    { text: "独自思考，沉淀内心想法", score: 5 }
+                ]
+            },
+            {
+                text: "团队产生分歧时，你倾向于？",
+                options: [
+                    { text: "协调节奏，让事情平稳落地", score: 0 },
+                    { text: "不参与争执，保持中立态度", score: 1 },
+                    { text: "用温柔的方式调和矛盾氛围", score: 2 },
+                    { text: "坚持理想，说服大家认同观点", score: 3 }
+                ]
+            },
+            {
+                text: "别人需要紧急帮助时，你会？",
+                options: [
+                    { text: "按规则判断，稳定提供帮助", score: 0 },
+                    { text: "看心情决定，不想勉强自己", score: 1 },
+                    { text: "默默出手，不声张地解决问题", score: 5 },
+                    { text: "立刻行动，高效帮对方处理难题", score: 4 }
+                ]
+            },
+            {
+                text: "面对学习压力，你的心态是？",
+                options: [
+                    { text: "稳步推进，按计划完成所有任务", score: 0 },
+                    { text: "躺平摆烂，压力来了再应对", score: 1 },
+                    { text: "嘴上抱怨，却依旧咬牙坚持", score: 6 },
+                    { text: "自我消化，悄悄努力蓄力", score: 2 }
+                ]
+            },
+            {
+                text: "和朋友产生误会，你会？",
+                options: [
+                    { text: "主动沟通，稳定化解矛盾", score: 0 },
+                    { text: "顺其自然，等待时间冲淡", score: 1 },
+                    { text: "用温柔的方式修复关系氛围", score: 2 },
+                    { text: "坚持本心，不刻意讨好对方", score: 3 }
+                ]
+            },
+            {
+                text: "未来生活，你更向往？",
+                options: [
+                    { text: "安稳有序，节奏规律的日常", score: 0 },
+                    { text: "自在随性，不受束缚的生活", score: 1 },
+                    { text: "充满浪漫，有仪式感的日子", score: 2 },
+                    { text: "奔赴热爱，坚持理想的人生", score: 3 }
+                ]
+            },
+            {
+                text: "看到身边人忙碌内卷，你会？",
+                options: [
+                    { text: "保持自己节奏，稳步向前不跟风", score: 0 },
+                    { text: "佛系旁观，不参与内卷氛围", score: 1 },
+                    { text: "默默蓄力，等待自己的时机绽放", score: 2 },
+                    { text: "加倍努力，用行动追赶目标", score: 4 }
+                ]
+            },
+            {
+                text: "被别人否定时，你的反应是？",
+                options: [
+                    { text: "理性复盘，调整自己的做法", score: 0 },
+                    { text: "毫不在意，继续做自己", score: 1 },
+                    { text: "表面无所谓，内心悄悄努力", score: 6 },
+                    { text: "坚守理想，不被外界评价左右", score: 3 }
+                ]
+            },
+            {
+                text: "集体活动中，你更偏向？",
+                options: [
+                    { text: "配合大家，维持活动有序进行", score: 0 },
+                    { text: "安静旁观，享受独处的氛围", score: 5 },
+                    { text: "营造氛围，让活动更有氛围感", score: 2 },
+                    { text: "主动担当，带动大家完成活动", score: 4 }
+                ]
+            },
+            {
+                text: "评价自己，你觉得更像？",
+                options: [
+                    { text: "踏实靠谱，做事有始有终", score: 0 },
+                    { text: "松弛通透，内心自有山海", score: 7 },
+                    { text: "浪漫细腻，温柔且有力量", score: 2 },
+                    { text: "热血真实，永远积极向上", score: 6 }
+                ]
+            }
+        ];
+        // =================================================================
+
+        // 全局变量
+        let currentQuestion = 0;
+        let totalScores = new Array(8).fill(0);
+
+        // DOM 元素
+        const startPage = document.getElementById("startPage");
+        const questionPage = document.getElementById("questionPage");
+        const resultPage = document.getElementById("resultPage");
+        const startBtn = document.getElementById("startBtn");
+        const restartBtn = document.getElementById("restartBtn");
+        const currentNumEl = document.getElementById("currentNum");
+        const progressPercentEl = document.getElementById("progressPercent");
+        const progressBarEl = document.getElementById("progressBar");
+        const questionTextEl = document.getElementById("questionText");
+        const optionsContainerEl = document.getElementById("optionsContainer");
+        const resultTagEl = document.getElementById("resultTag");
+        const resultNameEl = document.getElementById("resultName");
+        const resultDescEl = document.getElementById("resultDesc");
+
+        // 切换页面
+        function switchPage(pageId) {
+            document.querySelectorAll(".page").forEach(page => page.classList.remove("active"));
+            document.getElementById(pageId).classList.add("active");
+        }
+
+        // 渲染当前题目
+        function renderQuestion() {
+            const q = QUESTIONS[currentQuestion];
+            const percent = Math.round(((currentQuestion + 1) / QUESTIONS.length) * 100);
+
+            currentNumEl.textContent = currentQuestion + 1;
+            progressPercentEl.textContent = `${percent}%`;
+            progressBarEl.style.width = `${percent}%`;
+            questionTextEl.textContent = q.text;
+            optionsContainerEl.innerHTML = "";
+
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement("button");
+                btn.className = "option-card w-full text-left p-4 border border-gray-200 rounded-xl hover:bg-blue-50 transition-all";
+                btn.innerHTML = `${String.fromCharCode(65 + idx)}. ${opt.text}`;
+                btn.onclick = () => selectAnswer(opt.score);
+                optionsContainerEl.appendChild(btn);
+            });
+        }
+
+        // 选择答案并计分
+        function selectAnswer(scoreId) {
+            totalScores[scoreId] += 1;
+            currentQuestion++;
+
+            if (currentQuestion >= QUESTIONS.length) {
+                showResult();
+            } else {
+                renderQuestion();
+            }
+        }
+
+        // 展示最终结果
+        function showResult() {
+            const maxScore = Math.max(...totalScores);
+            const resultIndex = totalScores.indexOf(maxScore);
+            const result = PERSONALITIES[resultIndex];
+
+            resultTagEl.textContent = result.tag;
+            resultNameEl.textContent = result.name;
+            resultDescEl.textContent = result.desc;
+            switchPage("resultPage");
+        }
+
+        // 重置测试
+        function resetTest() {
+            currentQuestion = 0;
+            totalScores = new Array(8).fill(0);
+            renderQuestion();
+            switchPage("startPage");
+        }
+
+        // 绑定事件
+        startBtn.addEventListener("click", () => {
+            renderQuestion();
+            switchPage("questionPage");
+        });
+        restartBtn.addEventListener("click", resetTest);
+    </script>
+</body>
+</html>
